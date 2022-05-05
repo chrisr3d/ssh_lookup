@@ -191,6 +191,15 @@ def _push_misp_data(parsed_files, feature):
                             'value': hassh
                         }
                     )
+            if 'banner' in record:
+                for banner in record['banner']:
+                    passive_ssh.add_attribute(
+                        **{
+                            'type': 'text',
+                            'object_relation': 'banner',
+                            'value': banner
+                        }
+                    )
             for feature in ('first_seen', 'last_seen'):
                 passive_ssh.add_attribute(
                     **{
