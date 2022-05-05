@@ -1,5 +1,5 @@
 {
-    "passive_ssh_url": "YOUR_PASSIVE_SSH_URL",
-    "api_user": "YOUR_PASSIVE_SSH_USER",
-    "api_key": "YOUR_PASSIVE_SSH_KEY"
+    "passive_ssh_url": "https://pssh.circl.lu",
+    "api_user": "geekweek",
+    "api_key": "RUyddR3ccRxR9yxFFQNSU94Aa9LkfASwuGZWr/iQynM="
 }
