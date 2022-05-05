@@ -1,0 +1,5 @@
+{
+    "passive_ssh_url": "YOUR_PASSIVE_SSH_URL",
+    "api_user": "YOUR_PASSIVE_SSH_USER",
+    "api_key": "YOUR_PASSIVE_SSH_KEY"
+}

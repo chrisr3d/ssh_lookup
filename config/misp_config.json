@@ -1,0 +1,5 @@
+{
+    "MISP_url": "YOUR_MISP_URL",
+    "MISP_automation_key": "YOUR_MISP_KEY",
+    "verify_certificate": false
+}

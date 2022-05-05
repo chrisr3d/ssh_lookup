@@ -1,0 +1,3 @@
+pymisp
+pyshark
+requests
