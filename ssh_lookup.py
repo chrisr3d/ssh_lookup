@@ -50,12 +50,6 @@ def _parse_destination(destination):
     return {'type': 'ip-dst', 'object_relation': 'ip-dst'}
 
 
-def _parse_input_args(args):
-    if args.csvinput is not None:
-        return args.csvinput, _perform_csv_queries, [args.name]
-    return args.jsoninput, _perform_json_queries, []
-
-
 def _parse_status_code(filename, parsed_files, status_code, savejson):
     if status_code == 401:
         _clean_tmp_files(savejson, parsed_files)
@@ -71,7 +65,7 @@ def _parse_status_code(filename, parsed_files, status_code, savejson):
 
 def _perform_csv_queries(filename, honeypot_name, passive_ssh_url, authentication):
     ssh_logs = tuple(_csv_to_json(filename, honeypot_name))
-    _write_json_logs(filename, honeypot_name)
+    _write_json_logs(ssh_logs, filename)
     return _perform_queries(ssh_logs, filename, passive_ssh_url, authentication)
 
 
@@ -229,7 +223,6 @@ def _push_misp_data(parsed_files, feature):
         print(f'Error while connecting to your MISP instance: {e}\nSaving MISP event in {misp_file}.', file=sys.stderr)
         return
     misp.add_event(misp_event)
-
 
 
 def _date_to_timestamp(date):
