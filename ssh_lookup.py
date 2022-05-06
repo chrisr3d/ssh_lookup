@@ -17,6 +17,13 @@ _CONNECTION_OBJECT_MAPPING = {
     'src_port': {'type': 'port', 'object_relation': 'src-port'}
 }
 _PASSIVE_SSH_FIELDS = ('banner', 'hassh', 'keys')
+_PASSIVE_SSH_OBJECT_MAPPING = {
+    'banner': {'type': 'text', 'object_relation': 'banner'},
+    'first_seen': {'type': 'datetime', 'object_relation': 'first_seen'},
+    'hassh': {'type': 'hassh-md5', 'object_relation': 'hassh'},
+    'last_seen': {'type': 'datetime', 'object_relation': 'last_seen'},
+    'port': {'type': 'port', 'object_relation': 'port'}
+}
 
 
 def _clean_tmp_files(savejson, parsed_files):
@@ -176,34 +183,21 @@ def _push_misp_data(parsed_files, feature):
                             'value': key['fingerprint']
                         }
                     )
-            if 'hassh' in record:
-                for hassh in record['hassh']:
-                    passive_ssh.add_attribute(
-                        **{
-                            'type': 'hassh-md5',
-                            'object_relation': 'hassh',
-                            'value': hassh
-                        }
-                    )
-            if 'banner' in record:
-                for banner in record['banner']:
-                    passive_ssh.add_attribute(
-                        **{
-                            'type': 'text',
-                            'object_relation': 'banner',
-                            'value': banner
-                        }
-                    )
-            for feature in ('first_seen', 'last_seen'):
-                passive_ssh.add_attribute(
-                    **{
-                        'type': 'datetime',
-                        'object_relation': feature,
-                        'value': record[feature]
-                    }
-                )
+            for feature in ('hassh', 'banner'):
+                if feature in record:
+                    for value in record[feature]:
+                        attribute = {'value': value}
+                        attribute.update(_PASSIVE_SSH_OBJECT_MAPPING[feature])
+                        passive_ssh.add_attribute(**attribute)
+            for feature in ('port', 'first_seen', 'last_seen'):
+                attribute = {'value': record[feature]}
+                attribute.update(_PASSIVE_SSH_OBJECT_MAPPING[feature])
+                passive_ssh.add_attribute(**attribute)
             for connection_uuid in connection_uuids:
                 passive_ssh.add_reference(connection_uuid, 'related-to')
+            for misp_object in misp_event.objects:
+                if misp_object.uuid in connection_uuids:
+                    misp_object.add_reference(passive_ssh.uuid, 'characterized-by')
             misp_event.add_object(passive_ssh)
     with open(_CONFIG_PATH / 'misp_config.json', 'rt', encoding='utf-8') as f:
         misp_config = json.loads(f.read())
