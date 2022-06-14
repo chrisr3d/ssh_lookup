@@ -8,8 +8,8 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from pymisp import PyMISP, MISPEvent, MISPObject
+from .common import import_misp_config, import_passivessh_config
 
-_CONFIG_PATH = Path(__file__).resolve().parent / 'config'
 _CONNECTION_OBJECT_FIELDS = ('dst_ip', 'dst_port', 'src_ip', 'src_port', 'timestamp')
 _CONNECTION_OBJECT_MAPPING = {
     'dst_port': {'type': 'port', 'object_relation': 'dst-port'},
@@ -199,11 +199,7 @@ def _push_misp_data(parsed_files, feature):
                 if misp_object.uuid in connection_uuids:
                     misp_object.add_reference(passive_ssh.uuid, 'characterized-by')
             misp_event.add_object(passive_ssh)
-    with open(_CONFIG_PATH / 'misp_config.json', 'rt', encoding='utf-8') as f:
-        misp_config = json.loads(f.read())
-    misp_url = misp_config['MISP_url']
-    misp_key = misp_config['MISP_automation_key']
-    misp_verifycert = misp_config['verify_certificate']
+    misp_url, misp_key, misp_verifycert = import_misp_config()
     first_seen = _timestamp_to_str(first_seen)
     last_seen = _timestamp_to_str(last_seen)
     misp_event.info = f'SSH logs captured between {first_seen} and {last_seen}'
@@ -245,10 +241,7 @@ def parse_logs(args):
             _write_json_logs(ssh_logs, csv_filename)
             parsed_files.append(f'{csv_filename}.json')
     else:
-        with open(_CONFIG_PATH / 'passive_ssh_config.json', 'rt', encoding='utf-8') as f:
-            passive_ssh_config = json.loads(f.read())
-            passive_ssh_url = passive_ssh_config['passive_ssh_url']
-            authentication = (passive_ssh_config['api_user'], passive_ssh_config['api_key'])
+        passive_ssh_url, authentication = import_passivessh_config()
         if args.csvinput is not None:
             feature = 'csv'
             for filename in args.csvinput:
@@ -268,32 +261,20 @@ def parse_logs(args):
     _clean_tmp_files(args.savejson, parsed_files)
 
 
-def parse_pcap(args):
-    return
-
-
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Perform lookups on a Passive-SSH platform.')
-    subparsers = parser.add_subparsers()
+    parser = argparse.ArgumentParser(description='Perform lookups on a Passive-SSH platform with data from SSH logs.')
 
-    logs_parser = subparsers.add_parser('logs', help='Parse SSH logs in CSV format.')
-    input_parser = logs_parser.add_mutually_exclusive_group(required=True)
+    input_parser = parser.add_mutually_exclusive_group(required=True)
     input_parser.add_argument('-c', '--csvinput', nargs='+', help='CSV input file(s).')
     input_parser.add_argument('-j', '--jsoninput', nargs='+', help='JSON input file(s).')
     input_parser.add_argument('-p', '--passivessh_input', nargs='+', help='Passive-SSH record already queried input file(s).')
-    logs_parser.add_argument('-n', '--name', default='cowrie', help='Honeypot name.')
-    logs_parser.add_argument('--misp', action='store_true', help='Submit lookup results to MISP.')
-    logs_parser.add_argument('--savejson', action='store_true', help='Save JSON converted data.')
-    logs_parser.set_defaults(func=parse_logs)
-
-    pcap_parser = subparsers.add_parser('pcap', parents=[parser], add_help=False, help='Parse SSH packets from pcap file(s).')
-    pcap_parser.add_argument('-i', '--input', nargs='+', required=True, help='PCAP input file(s).')
-    pcap_parser.add_argument('--misp', action='store_true', help='Submit lookup results to MISP.')
-    pcap_parser.set_defaults(func=parse_pcap)
+    parser.add_argument('-n', '--name', default='cowrie', help='Honeypot name.')
+    parser.add_argument('--misp', action='store_true', help='Submit lookup results to MISP.')
+    parser.add_argument('--savejson', action='store_true', help='Save JSON converted data.')
 
     args = parser.parse_args()
     try:
-        args.func(args)
+        parse_logs(args)
     except argparse.ArgumentError:
         parser.print_help()
         parser.exit()
