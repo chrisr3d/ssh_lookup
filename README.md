@@ -48,7 +48,7 @@ Everything included in one single script call (data loaded and queried) is pushe
 ## Usage
 
 ~~~~
-python3 ssh_lookup.py logs --csvinput YOUR_SSH_LOGS.cvs --misp --savejson
+python3 honeypot_logs_lookup.py --csvinput YOUR_SSH_LOGS.cvs --misp --savejson
 ~~~~
 
 #### Arguments
