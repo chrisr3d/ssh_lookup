@@ -44,11 +44,6 @@ Everything included in one single script call (data loaded and queried) is pushe
 - Install python requirements
 - All Python 3 code will be installed in a virtualenv (venv)
 
-## Config
-
-Access to our Passive-SSH platform:
-geekweek:RUyddR3ccRxR9yxFFQNSU94Aa9LkfASwuGZWr/iQynM=
-
 
 ## Usage
 
