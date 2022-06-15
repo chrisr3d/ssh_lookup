@@ -4,7 +4,7 @@ import requests
 import subprocess
 import sys
 from pathlib import Path
-from pymisp import MISPAttribute, MISPEvent, MISPObject
+from pymisp import MISPAttribute, MISPEvent, MISPObject, PyMISP
 from utils import _create_misp_passive_ssh_object, _import_misp_config, _import_passivessh_config, _set_misp_event_info
 
 _CONNECTION_OBJECT_MAPPING = (
@@ -108,6 +108,32 @@ def parse_pcaps(args):
         with open(output_path / f'{filename}json', 'wt', encoding='utf-8') as f:
             f.write(misp_event.to_json(indent=4))
         print(f'MISP standard format with the results of the parsed PCAP data has been stored in {output_path}/{filename}json')
+    if args.pushmisp:
+        misp_url, misp_key, misp_verifycert = _import_misp_config()
+        try:
+            misp = PyMISP(misp_url, misp_key, misp_verifycert)
+        except Exception as e:
+            print(f'Error while connecting to your MISP instance: {e}')
+            return
+        misp.add_event(misp_event)
+
+
+def push_misp_format(args):
+    misp_url, misp_key, misp_verifycert = _import_misp_config()
+    try:
+        misp = PyMISP(misp_url, misp_key, misp_verifycert)
+    except Exception as e:
+        print(f'Error while connecting to your MISP instance: {e}')
+        return
+    for filename in args.mispinput:
+        try:
+            misp_event = MISPEvent()
+            misp_event.load_file(filename)
+        except Exception as e:
+            print(f'Error while loading {filename}: {e}')
+            continue
+        misp.add_event(misp_event)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Perform lookups on a Passive-SSH platform with data from PCAP files.')
