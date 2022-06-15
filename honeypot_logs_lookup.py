@@ -8,7 +8,7 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from pymisp import PyMISP, MISPEvent, MISPObject
-from .common import import_misp_config, import_passivessh_config
+from utils import _import_misp_config, _import_passivessh_config, _set_misp_event_info
 
 _CONNECTION_OBJECT_FIELDS = ('dst_ip', 'dst_port', 'src_ip', 'src_port', 'timestamp')
 _CONNECTION_OBJECT_MAPPING = {
@@ -17,13 +17,6 @@ _CONNECTION_OBJECT_MAPPING = {
     'src_port': {'type': 'port', 'object_relation': 'src-port'}
 }
 _PASSIVE_SSH_FIELDS = ('banner', 'hassh', 'keys')
-_PASSIVE_SSH_OBJECT_MAPPING = {
-    'banner': {'type': 'text', 'object_relation': 'banner'},
-    'first_seen': {'type': 'datetime', 'object_relation': 'first_seen'},
-    'hassh': {'type': 'hassh-md5', 'object_relation': 'hassh'},
-    'last_seen': {'type': 'datetime', 'object_relation': 'last_seen'},
-    'port': {'type': 'port', 'object_relation': 'port'}
-}
 
 
 def _clean_tmp_files(savejson, parsed_files):
@@ -166,43 +159,15 @@ def _push_misp_data(parsed_files, feature):
             connection_uuids.append(connection_object.uuid)
         if ip_address in passive_ssh_records:
             record = passive_ssh_records[ip_address]
-            passive_ssh = MISPObject('passive-ssh')
-            passive_ssh.add_attribute(
-                **{
-                    'type': 'ip-dst',
-                    'object_relation': 'host',
-                    'value': ip_address
-                }
-            )
-            if 'keys' in record:
-                for key in record['keys']:
-                    passive_ssh.add_attribute(
-                        **{
-                            'type': 'ssh-fingerprint',
-                            'object_relation': 'fingerprint',
-                            'value': key['fingerprint']
-                        }
-                    )
-            for feature in ('hassh', 'banner'):
-                if feature in record:
-                    for value in record[feature]:
-                        attribute = {'value': value}
-                        attribute.update(_PASSIVE_SSH_OBJECT_MAPPING[feature])
-                        passive_ssh.add_attribute(**attribute)
-            for feature in ('port', 'first_seen', 'last_seen'):
-                attribute = {'value': record[feature]}
-                attribute.update(_PASSIVE_SSH_OBJECT_MAPPING[feature])
-                passive_ssh.add_attribute(**attribute)
+            passive_ssh = _create_misp_passive_ssh_object(record, ip_address=ip_address)
             for connection_uuid in connection_uuids:
                 passive_ssh.add_reference(connection_uuid, 'related-to')
             for misp_object in misp_event.objects:
                 if misp_object.uuid in connection_uuids:
                     misp_object.add_reference(passive_ssh.uuid, 'characterized-by')
             misp_event.add_object(passive_ssh)
-    misp_url, misp_key, misp_verifycert = import_misp_config()
-    first_seen = _timestamp_to_str(first_seen)
-    last_seen = _timestamp_to_str(last_seen)
-    misp_event.info = f'SSH logs captured between {first_seen} and {last_seen}'
+    misp_url, misp_key, misp_verifycert = _import_misp_config()
+    misp_event.info = _set_misp_event_info('logs', first_seen, last_seen)
     try:
         misp = PyMISP(misp_url, misp_key, misp_verifycert)
     except Exception as e:
@@ -222,10 +187,6 @@ def _date_to_timestamp(date):
     return datetime.strptime(date, f'%B %d{ordinal} %Y, %H:%M:%S.%f').timestamp()
 
 
-def _timestamp_to_str(timestamp):
-    return datetime.strftime(datetime.utcfromtimestamp(int(timestamp)), '%Y-%m-%d %H:%M:%S')
-
-
 def _write_json_logs(ssh_logs, filename):
     with open(f'{filename}.json', 'wt', encoding='utf-8') as f:
         f.write(json.dumps(ssh_logs, indent=4))
@@ -241,7 +202,7 @@ def parse_logs(args):
             _write_json_logs(ssh_logs, csv_filename)
             parsed_files.append(f'{csv_filename}.json')
     else:
-        passive_ssh_url, authentication = import_passivessh_config()
+        passive_ssh_url, authentication = _import_passivessh_config()
         if args.csvinput is not None:
             feature = 'csv'
             for filename in args.csvinput:
