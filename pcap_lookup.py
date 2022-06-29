@@ -33,7 +33,10 @@ def parse_pcaps(args):
         ips.update([src_ip, dst_ip])
         key = (src_ip, src_port, dst_ip, dst_port)
         if key not in connections:
-            connections[key] = {'first_seen': float('inf')}
+            connections[key] = {
+                'first_seen': float('inf'),
+                'counter': 0
+            }
         timestamp = float(timestamp)
         if timestamp < connections[key]['first_seen']:
             connections[key]['first_seen'] = timestamp
@@ -41,6 +44,7 @@ def parse_pcaps(args):
             last_seen = timestamp
         if timestamp < first_seen:
             first_seen = timestamp
+        connections[key]['counter'] += 1
         if hassh:
             if hassh not in hasshs:
                 attribute = MISPAttribute()
@@ -84,6 +88,13 @@ def parse_pcaps(args):
                 'type': 'datetime',
                 'object_relation': 'first-packet-seen',
                 'value': values['first_seen']
+            }
+        )
+        misp_object.add_attribute(
+            **{
+                'type': 'counter',
+                'object_relation': 'count',
+                'value': values['counter']
             }
         )
         misp_object.add_attribute(
